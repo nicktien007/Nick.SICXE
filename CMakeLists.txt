@@ -3,5 +3,5 @@ project(SicAssembler)
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_executable(SicAssembler main.cpp)
+add_executable(SicAssembler sic.cpp)
 add_executable(Test test01.cpp)

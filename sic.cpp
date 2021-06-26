@@ -27,12 +27,12 @@ typedef struct StatementInfo{
     string first;
     string second;
     string third;
-};
+} StatementInfo;
 
 typedef struct SymbolTablePair{
     string label;
     string address;
-};
+} SymbolTablePair;
 
 vector<StatementInfo> statementInfos;
 vector<string> location;
@@ -40,9 +40,7 @@ vector<SymbolTablePair> symbolTable;
 vector<string> objectCodes;
 
 void handleSymbolTableAndLocation();
-
 void handleObjectCodes();
-
 void showAndOutputResult_Pass2();
 void showAndOutputResult_Pass1();
 
@@ -99,7 +97,6 @@ void openFile() {
 int main() {
     openFile();
     handleSymbolTableAndLocation();
-    //TODO:dump location and symbol table
     showAndOutputResult_Pass1();
     handleObjectCodes();
     showAndOutputResult_Pass2();
@@ -200,7 +197,7 @@ void handleObjectCodes() {
                 string labelOfX = si.third.substr(0, si.third.length() - 2 );
                 if (symbolTable[j].label == labelOfX){
                     //先16->10(8000也16->10)再相加，最後再轉16進位
-                    int res_dec = (int)strtol(symbolTable[j].address.data(), nullptr, 16)+(int)strtol("8000", NULL, 16);;
+                    int res_dec = (int)strtol(symbolTable[j].address.data(), nullptr, 16)+(int)strtol("8000", nullptr, 16);
                     ss << int_to_hex(res_dec);
                     break;
                 }
@@ -234,7 +231,7 @@ void handleObjectCodes() {
             }
         } else if(si.second == "WORD"){
             //直接輸出並補足6位元,先不考慮超過6位元的處理
-            ss << setw(6) << setfill('0') << int_to_hex(stoi(si.third.data()));
+            ss << setw(6) << setfill('0') << int_to_hex(stoi(si.third));
         } else if(si.second == "RSUB"){
             //RSUB=>opCode後補滿0六位
             ss << "0000";
@@ -250,7 +247,7 @@ void handleObjectCodes() {
  * 開Output檔並回傳 ofstream
  * @return
  */
-ofstream openOutputStream(string f){
+ofstream openOutputStream(const string& f){
     // 匯出檔案
     ofstream ofs;
     ofs.open(f);
@@ -310,10 +307,10 @@ void showAndOutputResult_Pass1() {
     cout << "================PASS1_Symbol Table===============" << endl;
     cout << title2;
     ofs2 << title2;
-    for (int i = 0; i < symbolTable.size(); ++i) {
+    for (auto & s : symbolTable) {
         const string &st = string_format("%-16s\t%-6s\t\r\n",
-                                         symbolTable[i].label.data(),
-                                         symbolTable[i].address.data());
+                                         s.label.data(),
+                                         s.address.data());
         cout << st;
         ofs2 << st;
     }
@@ -344,7 +341,7 @@ void showAndOutputResult_Pass2() {
 
     ofstream ofs2 = openOutputStream(OUTPUTPASS2_2NAME);
     const string &totalLen = int_to_hex(
-            (int) strtol(location.back().data(), nullptr, 16) - (int) strtol(location.begin()->data(), NULL, 16));
+            (int) strtol(location.back().data(), nullptr, 16) - (int) strtol(location.begin()->data(), nullptr, 16));
 
     //Header record
     stringstream ss;
@@ -373,7 +370,7 @@ void showAndOutputResult_Pass2() {
         if (ss.str().length() + objectCodes[i].length() > 60) {
             lineLen = int_to_hex((int) ss.str().length() / 2).substr(2, 2);
             cout << "T" << setw(6) << right << setfill('0') << lineStartAddr << lineLen << ss.str() << endl;
-            ofs2 << "T" << setw(6) << right << setfill('0') << lineStartAddr << lineLen << ss.str() << endl;;
+            ofs2 << "T" << setw(6) << right << setfill('0') << lineStartAddr << lineLen << ss.str() << endl;
             ss.str("");
             tagLineStartAddr = true;
         }
@@ -382,12 +379,12 @@ void showAndOutputResult_Pass2() {
 
         //不是start 且 沒有objectCode，計算長度後判斷有無超過60
         if (si.second != "START" && objectCodes[i].empty()) {
-            int ll = (int) strtol(location[i].data(), nullptr, 16) - (int) strtol(location[i - 1].data(), NULL, 16);
+            int ll = (int) strtol(location[i].data(), nullptr, 16) - (int) strtol(location[i - 1].data(), nullptr, 16);
             if (ss.str().length() + ll * 2 > 60) {
                 string outs = regex_replace(ss.str(), regex("\\$"), "");
                 lineLen = int_to_hex((int) outs.length() / 2).substr(2, 2);
                 cout << "T" << setw(6) << right << setfill('0') << lineStartAddr << lineLen << outs << endl;
-                ofs2 << "T" << setw(6) << right << setfill('0') << lineStartAddr << lineLen << outs << endl;;
+                ofs2 << "T" << setw(6) << right << setfill('0') << lineStartAddr << lineLen << outs << endl;
                 ss.str("");
                 tagLineStartAddr = true;
             }
@@ -397,7 +394,7 @@ void showAndOutputResult_Pass2() {
         if (i == statementInfos.size() - 1) {
             lineLen = int_to_hex((int) ss.str().length() / 2).substr(2, 2);
             cout << "T" << setw(6) << right << setfill('0') << lineStartAddr << lineLen << ss.str() << endl;
-            ofs2 << "T" << setw(6) << right << setfill('0') << lineStartAddr << lineLen << ss.str() << endl;;
+            ofs2 << "T" << setw(6) << right << setfill('0') << lineStartAddr << lineLen << ss.str() << endl;
             break;
         }
 
@@ -431,4 +428,3 @@ void showAndOutputResult_Pass2() {
     cout << ss.str();
     ofs2 << ss.str();
 }
-
