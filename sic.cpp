@@ -7,10 +7,10 @@
 using namespace std;
 
 #define FILENAME "./source.txt"
-#define OUTPUTPASS1_1NAME "./pass1_SourceProgram_onlyLoc.txt"
-#define OUTPUTPASS1_2NAME "./pass1_SymbolTable.txt"
-#define OUTPUTPASS2_1NAME "./pass2_sourceProgram.txt"
-#define OUTPUTPASS2_2NAME "./pass2_finalObjcetProgram.txt"
+#define OUTPUTPASS1_1NAME "./sic_pass1_SourceProgram_onlyLoc.txt"
+#define OUTPUTPASS1_2NAME "./sic_pass1_SymbolTable.txt"
+#define OUTPUTPASS2_1NAME "./sic_pass2_sourceProgram.txt"
+#define OUTPUTPASS2_2NAME "./sic_pass2_finalObjcetProgram.txt"
 
 
 const vector<string> opTable = {"ADD", "ADDF", "ADDR", "AND", "CLEAR", "COMP", "COMPF", "COMPR", "DIV", "DIVF", "DIVR",

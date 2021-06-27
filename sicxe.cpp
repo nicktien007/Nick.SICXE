@@ -7,10 +7,10 @@
 using namespace std;
 
 #define FILENAME "./SICXEsource.txt"
-#define OUTPUTPASS1_1NAME "./pass1_xe_SourceProgram_onlyLoc.txt"
-#define OUTPUTPASS1_2NAME "./pass1_xe_SymbolTable.txt"
-#define OUTPUTPASS2_1NAME "./pass2_xe_sourceProgram.txt"
-#define OUTPUTPASS2_2NAME "./pass2_xe_finalObjcetProgram.txt"
+#define OUTPUTPASS1_1NAME "./xe_pass1_SourceProgram_onlyLoc.txt"
+#define OUTPUTPASS1_2NAME "./xe_pass1_SymbolTable.txt"
+#define OUTPUTPASS2_1NAME "./xe_pass2_sourceProgram.txt"
+#define OUTPUTPASS2_2NAME "./xe_pass2_finalObjcetProgram.txt"
 
 const vector<vector<string>> opTable = {{"ADD", "3", "18"}, {"ADDF", "3", "58"}, {"ADDR", "2", "90"}, {"AND", "3", "40"}, {"CLEAR", "2", "B4"}, {"COMPF", "3", "88"}, {"COMPR", "2", "A0"}, {"COMP", "3", "28"}, {"DIVF", "3", "64"}
         , {"DIVR", "2", "9C"}, {"DIV", "3", "24"}, {"FIX", "1", "C4"}, {"FLOAT", "1", "C0"}, {"HIO", "1", "F4"}, {"J", "3", "3C"}, {"JEQ", "3", "30"}, {"JGT", "3", "34"}, {"JLT", "3", "38"}, {"JSUB", "3", "48"}
@@ -181,7 +181,7 @@ void handleSymbolTableAndLocation() {
         if (si.second.find("BASE") != string::npos) {
             //先儲存base的運算元稍後利用SYM_TAB找出位置(Base Relative)
             base = si.third;
-            location.emplace_back("");
+            location.emplace_back("    ");//blank character *4
 
             decLoc += (int) strtol(length[i - 1].data(), nullptr, 16);
             hexLoc = int_to_hex(decLoc);
@@ -195,7 +195,7 @@ void handleSymbolTableAndLocation() {
 //                    hexLoc = "";
 //                }
             } else {
-                hexLoc = "0";
+                hexLoc = "0000";
             }
 
             location.push_back(hexLoc);
@@ -421,7 +421,7 @@ void handleObjectCodes() {
                     string n1 = getN1FromSymbolTable(si);
                     string n2 = location[i + 1];
 
-                    if (n2.empty()) {
+                    if (n2 == "    ") {
                         //遇到BASE讀下一個位置
                         n2 = location[i + 2];
                     }
@@ -663,6 +663,7 @@ void showAndOutputResult_Pass2() {
     //Text record
     string lineLen;
     string lineStartAddr;
+    stringstream mr;
     bool tagLineStartAddr = true;
     for (int i = 0; i < statementInfos.size(); ++i) {
         if (tagLineStartAddr) {
@@ -723,12 +724,36 @@ void showAndOutputResult_Pass2() {
                 ss << "$";
             }
         } else {
+            //add modification record
+            // contain "+"
+            // not contain "#"、"@"、",X"
+            if (si.second.find('+') != string::npos
+            && si.third.find('#')  == string::npos
+            && si.third.find('@')  == string::npos
+            && si.third.find(",X")  == string::npos
+            ) {
+
+                string mLoc = int_to_hex(strtol(location[i].data(), nullptr, 16) + (int) strtol("1", nullptr, 16));
+                mLoc.erase(0, mLoc.find_first_not_of('0'));
+
+                mr << "M"
+                << setw(6) << right << setfill('0')
+                << mLoc
+                << "05" //寫死它，因為目前沒有"06"的狀況
+                << "+" + statementInfos[0].first
+                << endl;
+            }
+            // add objectCodes
             ss << objectCodes[i + 1];
         }
     }
 
-    //End record
     ss.str("");
+
+    //modification record
+    ss << mr.str();
+
+    //End record
     ss << "E" << setw(6) << right << setfill('0') << location[0];
 
     cout << ss.str();
