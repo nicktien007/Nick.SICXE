@@ -19,7 +19,7 @@ const vector<vector<string>> opTable = {{"ADD", "3", "18"}, {"ADDF", "3", "58"},
         , {"SSK", "3", "EC"}, {"STA", "3", "0C"}, {"STB", "3", "78"}, {"STCH", "3", "54"}, {"STF", "3", "80"}, {"STI", "3", "D4"}, {"STL", "3", "14"}, {"STSW", "3", "E8"}, {"STS", "3", "7C"}, {"STT", "3", "84"}
         , {"STX", "3", "10"}, {"SUBF", "3", "5C"}, {"SUBR", "2", "94"}, {"SUB", "3", "1C"}, {"SVC", "2", "B0"}, {"TD", "3", "E0"}, {"TIO", "1", "F8"}, {"TIXR", "2", "B8"}, {"TIX", "3", "2C"}, {"WD", "3", "DC"}};
 
-typedef struct StatementInfo{
+typedef struct StatementInfo {
     string first;
     string second;
     string third;
@@ -27,7 +27,7 @@ typedef struct StatementInfo{
     string format;
 } StatementInfo;
 
-typedef struct SymbolTablePair{
+typedef struct SymbolTablePair {
     string label;
     string address;
 } SymbolTablePair;
@@ -41,9 +41,14 @@ string base;
 
 
 void handleSymbolTableAndLocation();
+
 void handleObjectCodes();
+
 void showAndOutputResult_Pass2();
+
 void showAndOutputResult_Pass1();
+
+string &getN1FromSymbolTable(const StatementInfo &si);
 
 void openFile() {
     ifstream file;
@@ -75,18 +80,18 @@ void openFile() {
             ss.push_back(s);
         }
         StatementInfo info = StatementInfo();
-        if (ss.size() == 3){
+        if (ss.size() == 3) {
             info.first = ss[0];
             info.second = ss[1];
             info.third = ss[2];
         }
-        if (ss.size() == 2){
+        if (ss.size() == 2) {
             info.first = "";
             info.second = ss[0];
             info.third = ss[1];
         }
 
-        if (ss.size() == 1){
+        if (ss.size() == 1) {
             info.first = "";
             info.second = ss[0];
             info.third = "";
@@ -107,7 +112,7 @@ void openFile() {
                 second = regex_replace(second, regex("\\+"), "");
             }
             for (int i = 0; i < opTable.size(); ++i) {
-                if (second == opTable[i][0]){
+                if (second == opTable[i][0]) {
                     len += stoi(opTable[i][1]);
                     format = to_string(len);
                     opcode = opTable[i][2];
@@ -149,7 +154,7 @@ string int_to_hex(T v) {
     return stream.str();
 }
 
-vector<string> splitByRegex(string text, const string& regex){
+vector<string> splitByRegex(string text, const string &regex) {
     std::regex rgx(regex);
     std::sregex_token_iterator iter(text.begin(),
                                     text.end(),
@@ -173,17 +178,16 @@ void handleSymbolTableAndLocation() {
         StatementInfo &si = statementInfos[i];
 
         //計算位置
-        if (si.second.find("BASE")!=string::npos){
+        if (si.second.find("BASE") != string::npos) {
             //先儲存base的運算元稍後利用SYM_TAB找出位置(Base Relative)
             base = si.third;
             location.emplace_back("");
 
-            decLoc += (int)strtol(length[i-1].data(), nullptr, 16);
+            decLoc += (int) strtol(length[i - 1].data(), nullptr, 16);
             hexLoc = int_to_hex(decLoc);
-        }
-        else{
+        } else {
             if (i > 1) {
-                decLoc += (int)strtol(length[i-1].data(), nullptr, 16);
+                decLoc += (int) strtol(length[i - 1].data(), nullptr, 16);
                 hexLoc = int_to_hex(decLoc);
 
                 //end無位置
@@ -208,29 +212,29 @@ void handleSymbolTableAndLocation() {
 
         len = stoi(length[i]);
         //計算長度
-        if (i == 0){
+        if (i == 0) {
             len = 0;
-        }else if(si.second == "BYTE"){//byte分為C和X
+        } else if (si.second == "BYTE") {//byte分為C和X
             if (si.third.find('C') != string::npos) {
-                unsigned long idx =  si.third.find('\'',0);
+                unsigned long idx = si.third.find('\'', 0);
                 len = si.third.length() - idx - 2;
-            } else{
+            } else {
                 //當X'F1'時長度1
                 len = 1;
             }
-        }else if(si.second == "RESW"){//數字*3
+        } else if (si.second == "RESW") {//數字*3
             len = stoi(si.third) * 3;
-        }else if(si.second == "RESB"){
+        } else if (si.second == "RESB") {
             len = stoi(int_to_hex(stoi(si.third)));
-        }else if(si.second == "WORD"){
+        } else if (si.second == "WORD") {
             len = 3;
-        }else if(si.second == "CLEAR"){
+        } else if (si.second == "CLEAR") {
             len = 2;
         }
         length[i] = to_string(len);
 
         //建立SYM_TAB
-        if (i != 0 && !si.first.empty()){
+        if (i != 0 && !si.first.empty()) {
             if (base == si.first)
                 base = hexLoc;
 
@@ -246,13 +250,13 @@ void handleObjectCodes() {
     for (int i = 0; i < statementInfos.size(); ++i) {
         stringstream ss;
         StatementInfo &si = statementInfos[i];
-        if (si.second == "END"){
+        if (si.second == "END") {
             objectCodes.emplace_back("");
             break;
         }
 
         // format 2 : op r1 r2
-        if (si.format == "2"){
+        if (si.format == "2") {
             ss << si.opcode;
             const vector<string> &splitThird = splitByRegex(si.third, ",");
             int j = 0;
@@ -267,46 +271,46 @@ void handleObjectCodes() {
                     ss << "6";
                 } else if (splitThird[j] == "A") {
                     ss << "0";
-                }else if (splitThird[j] == "X"){
+                } else if (splitThird[j] == "X") {
                     ss << "1";
                 }
             }
             //若無r2則補0
-            if (j == 1){
+            if (j == 1) {
                 ss << "0";
             }
         }
 
         //format 4 : op nixbpe address
-        if (si.format == "4"){
+        if (si.format == "4") {
             string nixbpe = "";
-            string b = bitset<8>(strtol(si.opcode.data(), nullptr,16)).to_string();
-            string bb = b.substr(0,6);
+            string b = bitset<8>(strtol(si.opcode.data(), nullptr, 16)).to_string();
+            string bb = b.substr(0, 6);
             bb.erase(0, bb.find_first_not_of('0'));
 
-            if (b == "0"){
-                b = "000000";   //LDA須補0因為opcode=0
+            if (bb == "0") {
+                bb = "000000";   //LDA須補0因為opcode=0
             }
 
-            if (si.third.find('#') != string::npos){
+            if (si.third.find('#') != string::npos) {
                 nixbpe = "010001";
-            }else if(si.third.find('@') != string::npos){
+            } else if (si.third.find('@') != string::npos) {
                 nixbpe = "100001";
-            }else if(si.third.find(",X") != string::npos){
+            } else if (si.third.find(",X") != string::npos) {
                 nixbpe = "111001";
-            }else{
+            } else {
                 nixbpe = "110001";
             }
 
-            string r = int_to_hex(strtol((bb + nixbpe).data(), nullptr,2));
+            string r = int_to_hex(strtol((bb + nixbpe).data(), nullptr, 2));
             r.erase(0, r.find_first_not_of('0'));
 
             //遇到 LDA 補0
-            ss << setw(3) << right << setfill('0') << r ;
+            ss << setw(3) << right << setfill('0') << r;
 
             for (int j = 0; j < symbolTable.size(); ++j) {
                 if (si.third.find(symbolTable[j].label) != string::npos) {
-                    if (symbolTable[j].address.length() != 5){ //SYM 5位元補0 (20/4=5)
+                    if (symbolTable[j].address.length() != 5) { //SYM 5位元補0 (20/4=5)
                         for (int k = symbolTable[j].address.length(); k < 5; ++k) {
                             ss << "0";
                         }
@@ -321,7 +325,7 @@ void handleObjectCodes() {
                 && ch[1] - '0' <= 9) {
                 //#4096十轉十六->1000 放入hex
                 string hex = int_to_hex(stoi(si.third.substr(1, si.third.length() - 1)));
-                if (hex.length() != 5 ){//hex要 5位元並補0 (20/4=5)
+                if (hex.length() != 5) {//hex要 5位元並補0 (20/4=5)
                     for (int j = hex.length(); j < 5; ++j) {
                         ss << "0";
                     }
@@ -331,22 +335,201 @@ void handleObjectCodes() {
         }
 
         //format 3 : op nixbpe disp
-        if (si.format == "3"){
+        if (si.format == "3") {
+            string nixbpe = "";
+            string b = bitset<8>(strtol(si.opcode.data(), nullptr, 16)).to_string();
+            string bb = b.substr(0, 6);
+            bb.erase(0, bb.find_first_not_of('0'));
 
+            if (bb == "0") {
+                bb = "000000";   //LDA須補0因為opcode=0
+            }
+
+            if (si.third.empty()
+                || si.second == "RSUB") {
+                nixbpe = "110000";
+                string r = int_to_hex(strtol((bb + nixbpe).data(), nullptr, 2));
+                r.erase(0, r.find_first_not_of('0'));
+                r += "000";
+                ss << r;
+            } else if (si.third.find(",X") != string::npos) {
+                string n1 = getN1FromSymbolTable(si);
+                string n2 = location[i + 1];
+
+                int disp = strtol(n1.data(), nullptr, 16) - strtol(n2.data(), nullptr, 16);
+                //pc Relative
+                if (disp < 2047 && disp > -2048) {
+                    nixbpe = "111010";
+                    string r = int_to_hex(strtol((bb + nixbpe).data(), nullptr, 2));
+                    r.erase(0, r.find_first_not_of('0'));
+
+                    //遇到 LDA 補0
+                    ss << setw(3) << right << setfill('0') << r;
+
+                    string dispHex = int_to_hex(disp);
+                    dispHex = (dispHex == "0000") ? "0" : dispHex.erase(0, dispHex.find_first_not_of('0'));
+                    if (dispHex.length() != 3) {
+                        for (int j = dispHex.length(); j < 3; ++j) {
+                            ss << "0";
+                        }
+                    }
+
+                    ss << dispHex;
+                } else {
+                    //base Relative
+                    nixbpe = "111100";
+                    disp = strtol(n1.data(), nullptr, 16) - strtol(base.data(), nullptr, 16);
+                    string r = int_to_hex(strtol((bb + nixbpe).data(), nullptr, 2));
+                    r.erase(0, r.find_first_not_of('0'));
+
+                    //遇到 LDA 補0
+                    ss << setw(3) << right << setfill('0') << r;
+
+                    string dispHex = int_to_hex(disp);
+                    dispHex = (dispHex == "0000") ? "0" : dispHex.erase(0, dispHex.find_first_not_of('0'));
+                    if (dispHex.length() != 3) {
+                        for (auto j = dispHex.length(); j < 3; ++j) {
+                            ss << "0";
+                        }
+                    }
+                    ss << dispHex;
+                }
+
+            } else if (si.third.find('#') != string::npos
+                       || si.third.find('@') != string::npos) {
+                //#3時 op #c
+                const char *ch = si.third.data();
+                if (ch[1] - '0' >= 0
+                    && ch[1] - '0' <= 9) {
+
+                    string n1 = int_to_hex(stoi(si.third.substr(1, si.third.length() - 1)));
+                    n1 = (n1 == "0000") ? "0" : n1.erase(0, n1.find_first_not_of('0'));
+                    nixbpe = si.third.find('#') != string::npos ? "010000" : "100000";
+
+                    string r = int_to_hex(strtol((bb + nixbpe).data(), nullptr, 2));
+                    r.erase(0, r.find_first_not_of('0'));
+
+                    //遇到 LDA 補0
+                    ss << setw(3) << right << setfill('0') << r;
+                    if (n1.length() != 3) {
+                        for (auto j = n1.length(); j < 3; ++j) {
+                            ss << "0";
+                        }
+                    }
+                    ss << n1;
+                } else {
+                    string n1 = getN1FromSymbolTable(si);
+                    string n2 = location[i + 1];
+
+                    if (n2.empty()) {
+                        //遇到BASE讀下一個位置
+                        n2 = location[i + 2];
+                    }
+                    int disp = strtol(n1.data(), nullptr, 16) - strtol(n2.data(), nullptr, 16);
+
+                    if (disp < 2047 && disp > -2048) {
+                        nixbpe = si.third.find('#') != string::npos ? "010010" : "100010";
+                        string r = int_to_hex(strtol((bb + nixbpe).data(), nullptr, 2));
+                        r.erase(0, r.find_first_not_of('0'));
+
+                        //遇到 LDA 補0
+                        ss << setw(3) << right << setfill('0') << r;
+
+                        string dispHex = int_to_hex(disp);
+                        dispHex = (dispHex == "0000") ? "0" : dispHex.erase(0, dispHex.find_first_not_of('0'));
+                        if (dispHex.length() != 3) {
+                            for (int j = dispHex.length(); j < 3; ++j) {
+                                ss << "0";
+                            }
+                        }
+                        ss << dispHex;
+                    } else {
+                        //base Relative
+                        nixbpe = si.third.find('#') != string::npos ? "010100" : "100100";
+                        disp = strtol(n1.data(), nullptr, 16) - strtol(base.data(), nullptr, 16);
+                        string r = int_to_hex(strtol((bb + nixbpe).data(), nullptr, 2));
+                        r.erase(0, r.find_first_not_of('0'));
+
+                        //遇到 LDA 補0
+                        ss << setw(3) << right << setfill('0') << r;
+
+                        string dispHex = int_to_hex(disp);
+                        dispHex = (dispHex == "0000") ? "0" : dispHex.erase(0, dispHex.find_first_not_of('0'));
+                        if (dispHex.length() != 3) {
+                            for (auto j = dispHex.length(); j < 3; ++j) {
+                                ss << "0";
+                            }
+                        }
+                        ss << dispHex;
+                    }
+                }
+            } else {
+                //一般狀況
+                string n1 = getN1FromSymbolTable(si);
+                string n2 = location[i + 1];
+
+                int disp = strtol(n1.data(), nullptr, 16) - strtol(n2.data(), nullptr, 16);
+                //pc Relative
+                if (disp < 2047 && disp > -2048) {
+                    nixbpe = "110010";
+                    string r = int_to_hex(strtol((bb + nixbpe).data(), nullptr, 2));
+                    r.erase(0, r.find_first_not_of('0'));
+
+                    //遇到 LDA 補0
+                    ss << setw(3) << right << setfill('0') << r;
+
+                    string dispHex = int_to_hex(disp);
+                    dispHex = dispHex.erase(0, dispHex.find_first_not_of('0'));
+                    if (dispHex.length() < 3) {
+                        for (int j = dispHex.length(); j < 3; ++j) {
+                            ss << "0";
+                        }
+                    }
+                    //當負數長度大於三切割
+                    if (dispHex.length() > 3) {
+                        ss << dispHex.substr(dispHex.length() - 3, 3);
+                    } else {
+                        ss << dispHex;
+                    }
+                } else {
+                    //base Relative
+                    nixbpe = "110100";
+                    disp = strtol(n1.data(), nullptr, 16) - strtol(base.data(), nullptr, 16);
+                    string r = int_to_hex(strtol((bb + nixbpe).data(), nullptr, 2));
+                    r.erase(0, r.find_first_not_of('0'));
+
+                    //遇到 LDA 補0
+                    ss << setw(3) << right << setfill('0') << r;
+                    string dispHex = int_to_hex(disp);
+                    dispHex = (dispHex == "0000") ? "0" : dispHex.erase(0, dispHex.find_first_not_of('0'));
+                    if (dispHex.length() != 3) {
+                        for (auto j = dispHex.length(); j < 3; ++j) {
+                            ss << "0";
+                        }
+                    }
+
+                    //當負數長度大於三切割
+                    if (dispHex.length() > 3) {
+                        ss << dispHex.substr(dispHex.length() - 3, 3);
+                    } else {
+                        ss << dispHex;
+                    }
+                }
+            }
         }
 
-        if (si.second == "BYTE"){
+        if (si.second == "BYTE") {
             unsigned long idx = si.third.find('\'');
-            string thirdSplit = si.third.substr(idx +1, si.third.length() - idx - 2 );
+            string thirdSplit = si.third.substr(idx + 1, si.third.length() - idx - 2);
             //處理BYTE：分為X和C
             for (int j = 0; j < thirdSplit.length(); ++j) {
                 //C
-               if (si.third.find('C') != string::npos){
-                   ss << int_to_hex((int)thirdSplit[j]).substr(2,2);
-               } else{
-               //X
-                   ss << thirdSplit[j];
-               }
+                if (si.third.find('C') != string::npos) {
+                    ss << int_to_hex((int) thirdSplit[j]).substr(2, 2);
+                } else {
+                    //X
+                    ss << thirdSplit[j];
+                }
             }
         }
 
@@ -356,11 +539,19 @@ void handleObjectCodes() {
 //        cout << o << endl;
 }
 
+string &getN1FromSymbolTable(const StatementInfo &si) {
+    for (auto &pair : symbolTable) {
+        if (si.third.find(pair.label) != string::npos) {
+            return pair.address;
+        }
+    }
+}
+
 /**
  * 開Output檔並回傳 ofstream
  * @return
  */
-ofstream openOutputStream(const string& f){
+ofstream openOutputStream(const string &f) {
     // 匯出檔案
     ofstream ofs;
     ofs.open(f);
@@ -372,14 +563,14 @@ ofstream openOutputStream(const string& f){
     return ofs;
 }
 
-string string_format(const string& fmt, ...) {
-    int size = ((int)fmt.size()) * 2 + 50;   // Use a rubric appropriate for your code
+string string_format(const string &fmt, ...) {
+    int size = ((int) fmt.size()) * 2 + 50;   // Use a rubric appropriate for your code
     string str;
     va_list ap;
     while (true) {     // Maximum two passes on a POSIX system...
         str.resize(size);
         va_start(ap, fmt);
-        int n = vsnprintf((char *)str.data(), size, fmt.c_str(), ap);
+        int n = vsnprintf((char *) str.data(), size, fmt.c_str(), ap);
         va_end(ap);
         if (n > -1 && n < size) {  // Everything worked
             str.resize(n);
@@ -397,7 +588,7 @@ void showAndOutputResult_Pass1() {
     ofstream ofs1 = openOutputStream(OUTPUTPASS1_1NAME);
 
     const string &title = string_format("%s\t%-6s\t%-6s\t\n",
-                                         "Loc"," ","Source Statement");
+                                        "Loc", " ", "Source Statement");
 
 
     cout << "================PASS1_Source Program===============" << endl;
@@ -416,11 +607,11 @@ void showAndOutputResult_Pass1() {
 
     ofstream ofs2 = openOutputStream(OUTPUTPASS1_2NAME);
     const string &title2 = string_format("%s\t%-6s\t%-6s\t\n",
-                                         "LabelName"," ","Address");
+                                         "LabelName", " ", "Address");
     cout << "================PASS1_Symbol Table===============" << endl;
     cout << title2;
     ofs2 << title2;
-    for (auto & s : symbolTable) {
+    for (auto &s : symbolTable) {
         const string &st = string_format("%-16s\t%-6s\t\r\n",
                                          s.label.data(),
                                          s.address.data());
@@ -516,8 +707,10 @@ void showAndOutputResult_Pass2() {
 
         //不是start 且 沒有objectCode，還是需要計算長度
         //因為 i = 0 是START，沒有objectCode，所以從i + 1開始
+        //忽略 BASE ，因為它沒有objectCode
         if (si.second != "START"
-            && objectCodes[i + 1].empty()) {
+            && objectCodes[i + 1].empty()
+            && statementInfos[i + 1].second != "BASE") {
             int ll = (int) strtol(location[i].data(), nullptr, 16) - (int) strtol(location[i - 1].data(), nullptr, 16);
 
             //這是最後一次就不用再append "$" 了
@@ -536,7 +729,7 @@ void showAndOutputResult_Pass2() {
 
     //End record
     ss.str("");
-    ss << "E"<< setw(6) << right << setfill('0') << location[0];
+    ss << "E" << setw(6) << right << setfill('0') << location[0];
 
     cout << ss.str();
     ofs2 << ss.str();

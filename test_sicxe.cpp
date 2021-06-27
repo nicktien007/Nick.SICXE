@@ -58,8 +58,9 @@ vector<string> splitByRegex(string text, const string& regex){
 int main() {
 //    test01();
 //    test02();
-    test03();
+//    test03();
 //    test04();
+    test05();
 
     return 0;
 }
@@ -121,13 +122,13 @@ void test04(){
 }
 
 void test05(){
-    string  a = "4015";
-    string  b = "8000";
+//    string  a = "FFFFFFEC";
+    string  a = "FFFF56fsfsfs89816564FFEC";
 
-    int res_10 = (int)strtol(a.data(), NULL, 16)+(int)strtol(b.data(), NULL, 16);;
+    string r = a.substr(a.length() - 3, 3);
 
-    cout << res_10 << endl;
-    cout<< int_to_hex(res_10) << endl;
+    //FEC
+    cout << r << endl;
 }
 
 void test06(){
