@@ -23,6 +23,7 @@ typedef struct StatementInfo{
     string first;
     string second;
     string third;
+    string opcode;
     string format;
 } StatementInfo;
 
@@ -62,12 +63,13 @@ void openFile() {
     int len = 0;
     string second;
     string format;
+    string opcode;
     while (getline(file, fs)) {
 
         istringstream in(fs);
         vector<char> v;
         vector<string> ss;
-        // split by blank
+        // splitByRegex by blank
         string s;
         while (in >> s) {
             ss.push_back(s);
@@ -108,17 +110,20 @@ void openFile() {
                 if (second == opTable[i][0]){
                     len += stoi(opTable[i][1]);
                     format = to_string(len);
+                    opcode = opTable[i][2];
                     break;;
                 }
             }
         }
 
         info.format = format;
+        info.opcode = opcode;
         length.push_back(to_string(len));
         statementInfos.push_back(info);
 
         format = "";
         len = 0;
+        opcode = "";
     }
 
     // 關檔
@@ -143,6 +148,20 @@ string int_to_hex(T v) {
            << hex << v;
     return stream.str();
 }
+
+vector<string> splitByRegex(string text, const string& regex){
+    std::regex rgx(regex);
+    std::sregex_token_iterator iter(text.begin(),
+                                    text.end(),
+                                    rgx,
+                                    -1);
+    std::sregex_token_iterator end;
+    vector<string> vs;
+    for (; iter != end; ++iter)
+        vs.push_back(*iter);
+    return vs;
+}
+
 
 void handleSymbolTableAndLocation() {
     int len = 0;
@@ -232,37 +251,88 @@ void handleObjectCodes() {
             break;
         }
 
-        // scan opCode
-        for (int j = 0; j < opTable.size(); ++j) {
-//            if (si.second == opTable[j]){
-//                ss << opCode[j];
-//                break;
-//            }
+        // format 2 : op r1 r2
+        if (si.format == "2"){
+            ss << si.opcode;
+            const vector<string> &splitThird = splitByRegex(si.third, ",");
+            int j = 0;
+            for (j = 0; j < splitThird.size(); ++j) {
+                if (splitThird[j] == "B") {
+                    ss << "3";
+                } else if (splitThird[j] == "S") {
+                    ss << "4";
+                } else if (splitThird[j] == "T") {
+                    ss << "5";
+                } else if (splitThird[j] == "F") {
+                    ss << "6";
+                } else if (splitThird[j] == "A") {
+                    ss << "0";
+                }else if (splitThird[j] == "X"){
+                    ss << "1";
+                }
+            }
+            //若無r2則補0
+            if (j == 1){
+                ss << "0";
+            }
         }
 
-        for (int j = 0; j < symbolTable.size(); ++j) {
-            //有X ,+8000h
-            if (si.third.find(",X") != string::npos){
-                string labelOfX = si.third.substr(0, si.third.length() - 2 );
-                if (symbolTable[j].label == labelOfX){
-                    //先16->10(8000也16->10)再相加，最後再轉16進位
-                    int res_dec = (int)strtol(symbolTable[j].address.data(), nullptr, 16)+(int)strtol("8000", nullptr, 16);
-                    ss << int_to_hex(res_dec);
-                    break;
-                }
-            } else if(symbolTable[j].label == si.third){
-                //小於6位元補0
-                int length = ss.str().length() + symbolTable[j].address.length();
-                if (length != 6) {
-                    for (int k = 0; k < 6 - length; ++k) {
-                        ss << "0";
+        //format 4 : op nixbpe address
+        if (si.format == "4"){
+            string nixbpe = "";
+            string b = bitset<8>(strtol(si.opcode.data(), nullptr,16)).to_string();
+            string bb = b.substr(0,6);
+            bb.erase(0, bb.find_first_not_of('0'));
+
+            if (b == "0"){
+                b = "000000";   //LDA須補0因為opcode=0
+            }
+
+            if (si.third.find('#') != string::npos){
+                nixbpe = "010001";
+            }else if(si.third.find('@') != string::npos){
+                nixbpe = "100001";
+            }else if(si.third.find(",X") != string::npos){
+                nixbpe = "111001";
+            }else{
+                nixbpe = "110001";
+            }
+
+            string r = int_to_hex(strtol((bb + nixbpe).data(), nullptr,2));
+            r.erase(0, r.find_first_not_of('0'));
+
+            //遇到 LDA 補0
+            ss << setw(3) << right << setfill('0') << r ;
+
+            for (int j = 0; j < symbolTable.size(); ++j) {
+                if (si.third.find(symbolTable[j].label) != string::npos) {
+                    if (symbolTable[j].address.length() != 5){ //SYM 5位元補0 (20/4=5)
+                        for (int k = symbolTable[j].address.length(); k < 5; ++k) {
+                            ss << "0";
+                        }
                     }
                     ss << symbolTable[j].address;
-                } else{
-                    ss << symbolTable[j].address;
+                    break;
                 }
-                break;
             }
+
+            const char *ch = si.third.data();
+            if (ch[1] - '0' >= 0
+                && ch[1] - '0' <= 9) {
+                //#4096十轉十六->1000 放入hex
+                string hex = int_to_hex(stoi(si.third.substr(1, si.third.length() - 1)));
+                if (hex.length() != 5 ){//hex要 5位元並補0 (20/4=5)
+                    for (int j = hex.length(); j < 5; ++j) {
+                        ss << "0";
+                    }
+                }
+                ss << hex;
+            }
+        }
+
+        //format 3 : op nixbpe disp
+        if (si.format == "3"){
+
         }
 
         if (si.second == "BYTE"){
@@ -278,12 +348,6 @@ void handleObjectCodes() {
                    ss << thirdSplit[j];
                }
             }
-        } else if(si.second == "WORD"){
-            //直接輸出並補足6位元,先不考慮超過6位元的處理
-            ss << setw(6) << setfill('0') << int_to_hex(stoi(si.third));
-        } else if(si.second == "RSUB"){
-            //RSUB=>opCode後補滿0六位
-            ss << "0000";
         }
 
         objectCodes.push_back(ss.str());

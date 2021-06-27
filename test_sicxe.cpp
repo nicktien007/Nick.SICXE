@@ -42,10 +42,24 @@ void test10();
 void test11();
 void test12();
 
+vector<string> splitByRegex(string text, const string& regex){
+    std::regex rgx(regex);
+    std::sregex_token_iterator iter(text.begin(),
+                                    text.end(),
+                                    rgx,
+                                    -1);
+    std::sregex_token_iterator end;
+    vector<string> vs;
+    for (; iter != end; ++iter)
+        vs.push_back(*iter);
+    return vs;
+}
+
 int main() {
 //    test01();
 //    test02();
     test03();
+//    test04();
 
     return 0;
 }
@@ -102,14 +116,8 @@ void test03(){
 }
 
 void test04(){
-    string  s = "C'EOF'";
-    unsigned long i = s.find('\'');
-    cout<< i <<endl;
-    cout<< s.length() - i - 2 <<endl;
-
-    string s2 = s.substr(i +1, s.length() - i - 2 );
-    cout << s2 << endl;
-    cout<<s2.length()<<endl;
+    string  s = "4B";
+    cout<<setw(3) << right << setfill('0')<<s;
 }
 
 void test05(){
