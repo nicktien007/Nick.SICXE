@@ -38,6 +38,7 @@ vector<StatementInfo> statementInfos;
 vector<string> location;
 vector<SymbolTablePair> symbolTable;
 vector<string> objectCodes;
+string lastAddress;
 
 void handleSymbolTableAndLocation();
 void handleObjectCodes();
@@ -130,9 +131,11 @@ void handleSymbolTableAndLocation() {
             decLoc += (int)strtol(to_string(len).data(), nullptr, 16);
             hexLoc = int_to_hex(decLoc);
 
-//            if (i == statementInfos.size() - 1){
-//                hexLoc = "";
-//            }
+            //end無位置
+            if (i == statementInfos.size() - 1) {
+                lastAddress = hexLoc;
+                hexLoc = "    ";
+            }
         }
 
         location.push_back(hexLoc);
@@ -341,7 +344,7 @@ void showAndOutputResult_Pass2() {
 
     ofstream ofs2 = openOutputStream(OUTPUTPASS2_2NAME);
     const string &totalLen = int_to_hex(
-            (int) strtol(location.back().data(), nullptr, 16) - (int) strtol(location.begin()->data(), nullptr, 16));
+            (int) strtol(lastAddress.data(), nullptr, 16) - (int) strtol(location.begin()->data(), nullptr, 16));
 
     //Header record
     stringstream ss;
@@ -390,11 +393,8 @@ void showAndOutputResult_Pass2() {
             }
         }
 
-        //最後一次迴圈，進行輸出
+        //最後一次迴圈，不輸出
         if (i == statementInfos.size() - 1) {
-            lineLen = int_to_hex((int) ss.str().length() / 2).substr(2, 2);
-            cout << "T" << setw(6) << right << setfill('0') << lineStartAddr << lineLen << ss.str() << endl;
-            ofs2 << "T" << setw(6) << right << setfill('0') << lineStartAddr << lineLen << ss.str() << endl;
             break;
         }
 
