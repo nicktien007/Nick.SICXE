@@ -35,6 +35,7 @@ typedef struct StatementInfo{
     string first;
     string second;
     string third;
+    string opcode;
 } StatementInfo;
 
 /**
@@ -79,6 +80,12 @@ void showAndOutputResult_Pass1();
 template<typename T>
 string int_to_hex(T v);
 string string_format(const string& fmt, ...);
+
+int getNextLen(const StatementInfo &si);
+
+void mergeObjectCodeByScanSymbolTable(const StatementInfo &si, stringstream &objectCode);
+
+void mergeObjectCodeBySecond(const StatementInfo &si, stringstream &objectCode);
 
 /**
  * 開檔並構建 StatementInfo
@@ -125,6 +132,15 @@ void openFileAndBuildStatementInfo() {
             info.second = ss[0];
             info.third = "";
         }
+
+        // scan opCode
+        for (int j = 0; j < opTable.size(); ++j) {
+            if (info.second == opTable[j]){
+                info.opcode = opCode[j];
+                break;
+            }
+        }
+
         statementInfos.push_back(info);
     }
 
@@ -162,8 +178,8 @@ int main() {
  * 構建 SymbolTable和Location
  */
 void buildSymbolTableAndLocation() {
-    int len = 0;
-    int n = 0;
+    int nextLen = 0;
+    int startLen = 0;
     int decLoc = 0;
     string hexLoc;
 
@@ -172,11 +188,20 @@ void buildSymbolTableAndLocation() {
         StatementInfo &si = statementInfos[i];
 
         //計算位置
+        if (i == 0){
+            startLen = stoi(si.third);
+            decLoc = (int)strtol(to_string(startLen).data(), nullptr, 16);
+
+            //location初始值設定
+            location.push_back(to_string(startLen));
+            continue;
+        }
+
         if (i == 1){
-            hexLoc = to_string(n);
+            hexLoc = to_string(startLen);
         }
         else {
-            decLoc += (int)strtol(to_string(len).data(), nullptr, 16);
+            decLoc += (int)strtol(to_string(nextLen).data(), nullptr, 16);
             hexLoc = int_to_hex(decLoc);
 
             //end無位置
@@ -185,38 +210,12 @@ void buildSymbolTableAndLocation() {
                 hexLoc = "    ";
             }
         }
-
         location.push_back(hexLoc);
 
-        //location初始值設定
-        if (i == 0){
-            n = stoi(si.third);
-            decLoc = (int)strtol(to_string(n).data(), nullptr, 16);
-
-            location[0] = to_string(n);
-        }
-
-        //計算長度
-        if (i == 0){
-            len = 0;
-        }else if(si.second == "BYTE"){//byte分為C和X
-            if (si.third.find('C') != string::npos) {
-                unsigned long idx =  si.third.find('\'',0);
-                len = si.third.length() - idx - 2;
-            } else{
-                //當X'F1'時長度1
-                len = 1;
-            }
-        }else if(si.second == "RESW"){//數字*3
-            len = stoi(si.third) * 3;
-        }else if(si.second == "RESB"){
-            len = stoi(int_to_hex(stoi(si.third)));
-        }else{
-            len = 3;
-        }
+        nextLen = getNextLen(si);
 
         //建立SYM_TAB
-        if (i != 0 && !si.first.empty()){
+        if (!si.first.empty()){
             SymbolTablePair p = SymbolTablePair();
             p.label = si.first;
             p.address = hexLoc;
@@ -226,72 +225,110 @@ void buildSymbolTableAndLocation() {
 }
 
 /**
+ * 計算下回合長度
+ * @param si
+ * @return
+ */
+int getNextLen(const StatementInfo &si) {
+    if (si.second == "BYTE") {//byte分為C和X
+        if (si.third.find('C') != string::npos) {
+            unsigned long idx = si.third.find('\'', 0);
+            return si.third.length() - idx - 2;
+        }
+
+        //當X'F1'時長度1
+        return 1;
+    }
+
+    //數字*3
+    if (si.second == "RESW") {
+        return stoi(si.third) * 3;
+    }
+
+    if (si.second == "RESB") {
+        return stoi(int_to_hex(stoi(si.third)));
+    }
+
+    return  3;
+}
+
+/**
  * 構建 object code
  */
 void buildObjectCodes() {
-    for (int i = 0; i < statementInfos.size(); ++i) {
-        stringstream ss;
-        StatementInfo &si = statementInfos[i];
+    for (auto & si : statementInfos) {
+
         if (si.second == "END"){
             objectCodes.emplace_back("");
             break;
         }
 
-        // scan opCode
-        for (int j = 0; j < opTable.size(); ++j) {
-            if (si.second == opTable[j]){
-                ss << opCode[j];
+        stringstream objectCode;
+        objectCode << si.opcode;
+        mergeObjectCodeByScanSymbolTable(si, objectCode);
+        mergeObjectCodeBySecond(si, objectCode);
+
+        objectCodes.push_back(objectCode.str());
+    }
+}
+
+/**
+ * 走訪 symbolTable 並 合併 objectCode
+ * @param si
+ * @param objectCode
+ */
+void mergeObjectCodeByScanSymbolTable(const StatementInfo &si, stringstream &objectCode) {
+    for (auto & symbol : symbolTable) {
+        //有X ,+8000h
+        if (si.third.find(",X") != string::npos){
+            string labelOfX = si.third.substr(0, si.third.length() - 2 );
+            if (symbol.label == labelOfX){
+                //先16->10(8000也16->10)再相加，最後再轉16進位
+                int res_dec = (int)strtol(symbol.address.data(), nullptr, 16) + (int)strtol("8000", nullptr, 16);
+                objectCode << int_to_hex(res_dec);
                 break;
             }
-        }
-
-        for (int j = 0; j < symbolTable.size(); ++j) {
-            //有X ,+8000h
-            if (si.third.find(",X") != string::npos){
-                string labelOfX = si.third.substr(0, si.third.length() - 2 );
-                if (symbolTable[j].label == labelOfX){
-                    //先16->10(8000也16->10)再相加，最後再轉16進位
-                    int res_dec = (int)strtol(symbolTable[j].address.data(), nullptr, 16)+(int)strtol("8000", nullptr, 16);
-                    ss << int_to_hex(res_dec);
-                    break;
+        } else if(symbol.label == si.third){
+            //小於6位元補0
+            int length = objectCode.str().length() + symbol.address.length();
+            if (length != 6) {
+                for (int k = 0; k < 6 - length; ++k) {
+                    objectCode << "0";
                 }
-            } else if(symbolTable[j].label == si.third){
-                //小於6位元補0
-                int length = ss.str().length() + symbolTable[j].address.length();
-                if (length != 6) {
-                    for (int k = 0; k < 6 - length; ++k) {
-                        ss << "0";
-                    }
-                    ss << symbolTable[j].address;
-                } else{
-                    ss << symbolTable[j].address;
-                }
-                break;
+                objectCode << symbol.address;
+            } else{
+                objectCode << symbol.address;
             }
+            break;
         }
+    }
+}
 
-        if (si.second == "BYTE"){
-            unsigned long idx = si.third.find('\'');
-            string thirdSplit = si.third.substr(idx +1, si.third.length() - idx - 2 );
-            //處理BYTE：分為X和C
-            for (int j = 0; j < thirdSplit.length(); ++j) {
-                //C
-               if (si.third.find('C') != string::npos){
-                   ss << int_to_hex((int)thirdSplit[j]).substr(2,2);
-               } else{
+/**
+ * 根據 second指令 做 objectCode 最後合併
+ * @param si
+ * @param objectCode
+ */
+void mergeObjectCodeBySecond(const StatementInfo &si, stringstream &objectCode) {
+    if (si.second == "BYTE"){
+        unsigned long idx = si.third.find('\'');
+        string thirdSplit = si.third.substr(idx +1, si.third.length() - idx - 2 );
+        //處理BYTE：分為X和C
+        for (char c : thirdSplit) {
+           if (si.third.find('C') != string::npos){
+               //C
+               objectCode << int_to_hex((int)c).substr(2, 2);
+           } else{
                //X
-                   ss << thirdSplit[j];
-               }
-            }
-        } else if(si.second == "WORD"){
-            //直接輸出並補足6位元,先不考慮超過6位元的處理
-            ss << setw(6) << setfill('0') << int_to_hex(stoi(si.third));
-        } else if(si.second == "RSUB"){
-            //RSUB=>opCode後補滿0六位
-            ss << "0000";
+               objectCode << c;
+           }
         }
-
-        objectCodes.push_back(ss.str());
+    } else if(si.second == "WORD"){
+        //直接輸出並補足6位元,先不考慮超過6位元的處理
+        objectCode << setw(6) << setfill('0') << int_to_hex(stoi(si.third));
+    } else if(si.second == "RSUB"){
+        //RSUB=>opCode後補滿0六位
+        objectCode << "0000";
     }
 }
 

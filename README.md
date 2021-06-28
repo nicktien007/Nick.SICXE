@@ -70,6 +70,7 @@ typedef struct StatementInfo{
     string first;
     string second;
     string third;
+	  string opcode;
 } StatementInfo;
 
 /**
