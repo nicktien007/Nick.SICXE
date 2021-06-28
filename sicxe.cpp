@@ -41,17 +41,20 @@ string base;
 string lastAddress;
 
 
-void handleSymbolTableAndLocation();
-
-void handleObjectCodes();
-
+void buildSymbolTableAndLocation();
+void buildObjectCodes();
 void showAndOutputResult_Pass2();
-
 void showAndOutputResult_Pass1();
-
 string &getN1FromSymbolTable(const StatementInfo &si);
+vector<string> splitByRegex(string text, const string& regex);
+template<typename T>
+string int_to_hex(T v);
+string string_format(const string& fmt, ...);
 
-void openFile() {
+/**
+ * 開檔並構建 StatementInfo
+ */
+void openFileAndBuildStatementInfo() {
     ifstream file;
 
     // 開檔
@@ -137,39 +140,35 @@ void openFile() {
     cout << "File is closed" << endl;
 }
 
+/**
+ * 開Output檔並回傳 ofstream
+ * @return
+ */
+ofstream openOutputStream(const string &f) {
+    // 匯出檔案
+    ofstream ofs;
+    ofs.open(f);
+    if (!ofs.is_open()) {
+        cout << "Can't open the file" << endl;
+        system("pause");
+    }
+
+    return ofs;
+}
+
 int main() {
-    openFile();
-    handleSymbolTableAndLocation();
+    openFileAndBuildStatementInfo();
+    buildSymbolTableAndLocation();
     showAndOutputResult_Pass1();
-    handleObjectCodes();
+    buildObjectCodes();
     showAndOutputResult_Pass2();
     return 0;
 }
 
-template<typename T>
-string int_to_hex(T v) {
-    stringstream stream;
-    stream << setfill('0') << setw(sizeof(T))
-           << uppercase
-           << hex << v;
-    return stream.str();
-}
-
-vector<string> splitByRegex(string text, const string &regex) {
-    std::regex rgx(regex);
-    std::sregex_token_iterator iter(text.begin(),
-                                    text.end(),
-                                    rgx,
-                                    -1);
-    std::sregex_token_iterator end;
-    vector<string> vs;
-    for (; iter != end; ++iter)
-        vs.push_back(*iter);
-    return vs;
-}
-
-
-void handleSymbolTableAndLocation() {
+/**
+ * 構建 SymbolTable和Location
+ */
+void buildSymbolTableAndLocation() {
     int len = 0;
     int decLoc = 0;
     string hexLoc;
@@ -248,7 +247,10 @@ void handleSymbolTableAndLocation() {
     }
 }
 
-void handleObjectCodes() {
+/**
+ * 構建 object code
+ */
+void buildObjectCodes() {
     for (int i = 0; i < statementInfos.size(); ++i) {
         stringstream ss;
         StatementInfo &si = statementInfos[i];
@@ -537,54 +539,11 @@ void handleObjectCodes() {
 
         objectCodes.push_back(ss.str());
     }
-//    for (const auto& o: objectCodes)
-//        cout << o << endl;
-}
-
-string &getN1FromSymbolTable(const StatementInfo &si) {
-    for (auto &pair : symbolTable) {
-        if (si.third.find(pair.label) != string::npos) {
-            return pair.address;
-        }
-    }
 }
 
 /**
- * 開Output檔並回傳 ofstream
- * @return
+ * 輸出Pass1檔案：symbolTable、location
  */
-ofstream openOutputStream(const string &f) {
-    // 匯出檔案
-    ofstream ofs;
-    ofs.open(f);
-    if (!ofs.is_open()) {
-        cout << "Can't open the file" << endl;
-        system("pause");
-    }
-
-    return ofs;
-}
-
-string string_format(const string &fmt, ...) {
-    int size = ((int) fmt.size()) * 2 + 50;   // Use a rubric appropriate for your code
-    string str;
-    va_list ap;
-    while (true) {     // Maximum two passes on a POSIX system...
-        str.resize(size);
-        va_start(ap, fmt);
-        int n = vsnprintf((char *) str.data(), size, fmt.c_str(), ap);
-        va_end(ap);
-        if (n > -1 && n < size) {  // Everything worked
-            str.resize(n);
-            return str;
-        }
-        if (n > -1)  // Needed size returned
-            size = n + 1;   // For null char
-        else
-            size *= 2;      // Guess at a larger size (OS specific)
-    }
-}
-
 void showAndOutputResult_Pass1() {
 
     ofstream ofs1 = openOutputStream(OUTPUTPASS1_1NAME);
@@ -622,7 +581,9 @@ void showAndOutputResult_Pass1() {
     }
 }
 
-
+/**
+ * 輸出Pass2檔案：final sourceProgram、final objectProgram
+ */
 void showAndOutputResult_Pass2() {
     ofstream ofs = openOutputStream(OUTPUTPASS2_1NAME);
 
@@ -758,4 +719,54 @@ void showAndOutputResult_Pass2() {
 
     cout << ss.str();
     ofs2 << ss.str();
+}
+
+template<typename T>
+string int_to_hex(T v) {
+    stringstream stream;
+    stream << setfill('0') << setw(sizeof(T))
+           << uppercase
+           << hex << v;
+    return stream.str();
+}
+
+string string_format(const string &fmt, ...) {
+    int size = ((int) fmt.size()) * 2 + 50;   // Use a rubric appropriate for your code
+    string str;
+    va_list ap;
+    while (true) {     // Maximum two passes on a POSIX system...
+        str.resize(size);
+        va_start(ap, fmt);
+        int n = vsnprintf((char *) str.data(), size, fmt.c_str(), ap);
+        va_end(ap);
+        if (n > -1 && n < size) {  // Everything worked
+            str.resize(n);
+            return str;
+        }
+        if (n > -1)  // Needed size returned
+            size = n + 1;   // For null char
+        else
+            size *= 2;      // Guess at a larger size (OS specific)
+    }
+}
+
+vector<string> splitByRegex(string text, const string &regex) {
+    std::regex rgx(regex);
+    std::sregex_token_iterator iter(text.begin(),
+                                    text.end(),
+                                    rgx,
+                                    -1);
+    std::sregex_token_iterator end;
+    vector<string> vs;
+    for (; iter != end; ++iter)
+        vs.push_back(*iter);
+    return vs;
+}
+
+string &getN1FromSymbolTable(const StatementInfo &si) {
+    for (auto &pair : symbolTable) {
+        if (si.third.find(pair.label) != string::npos) {
+            return pair.address;
+        }
+    }
 }

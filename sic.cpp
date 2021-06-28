@@ -12,40 +12,78 @@ using namespace std;
 #define OUTPUTPASS2_1NAME "./sic_pass2_sourceProgram.txt"
 #define OUTPUTPASS2_2NAME "./sic_pass2_finalObjcetProgram.txt"
 
-
+/**
+ * opTable
+ */
 const vector<string> opTable = {"ADD", "ADDF", "ADDR", "AND", "CLEAR", "COMP", "COMPF", "COMPR", "DIV", "DIVF", "DIVR",
                         "FIX", "FLOAT", "HIO", "J", "JEQ", "JGT", "JLT", "JSUB", "LDA", "LDB", "LDCH", "LDF", "LDL", "LDS",
                         "LDT", "LDX", "LPS", "MUL", "MULF", "MULR", "NORM", "OR", "RD", "RMO", "RSUB", "SHIFTL", "SHIFTR",
                         "SIO", "SSK", "STA", "STB", "STCH", "STF", "STI", "STL", "STS", "STSW", "STT", "STX", "SUB", "SUBF",
                         "SUBR", "SVC", "TD", "TIO", "TIX", "TIXR", "WD"};
+/**
+ * opCode
+ */
 const vector<string> opCode = {"18", "58", "90", "40", "B4", "28", "88", "A0", "24", "64", "9C", "C4", "C0", "F4", "3C",
                      "30", "34", "38", "48", "00", "68", "50", "70", "08", "6C", "74", "04", "E0", "20", "60", "98", "C8",
                      "44", "D8", "AC", "4C", "A4", "A8", "F0", "EC", "0C", "78", "54", "80", "D4", "14", "7C", "E8", "84",
                      "10", "1C", "5C", "94", "B0", "E0", "F8", "2C", "B8", "DC"};
 
+/**
+ * Source Statement 資料結構(ex:COPY START 1000)
+ */
 typedef struct StatementInfo{
     string first;
     string second;
     string third;
 } StatementInfo;
 
+/**
+ * SymbolTable 資料結構：包含 label名稱及 address位置
+ */
 typedef struct SymbolTablePair{
     string label;
     string address;
 } SymbolTablePair;
 
+/**
+ * 儲存 Source Statement 資訊
+ */
 vector<StatementInfo> statementInfos;
+
+/**
+ * 儲存 location 資訊
+ */
 vector<string> location;
+
+/**
+ * 儲存 Symbol Table 資訊
+ */
 vector<SymbolTablePair> symbolTable;
+
+/**
+ * 儲存 Object code資訊
+ */
 vector<string> objectCodes;
+
+/**
+ * 儲存 END 的位置資訊，用於產生 final object program使用
+ * 因為不呈現在source program，所以存放在location
+ */
 string lastAddress;
 
-void handleSymbolTableAndLocation();
-void handleObjectCodes();
+void buildSymbolTableAndLocation();
+void buildObjectCodes();
 void showAndOutputResult_Pass2();
 void showAndOutputResult_Pass1();
 
-void openFile() {
+template<typename T>
+string int_to_hex(T v);
+string string_format(const string& fmt, ...);
+
+/**
+ * 開檔並構建 StatementInfo
+ */
+void openFileAndBuildStatementInfo() {
     ifstream file;
 
     // 開檔
@@ -95,25 +133,35 @@ void openFile() {
     cout << "File is closed" << endl;
 }
 
+/**
+ * 開Output檔並回傳 ofstream
+ * @return
+ */
+ofstream openOutputStream(const string& f){
+    // 匯出檔案
+    ofstream ofs;
+    ofs.open(f);
+    if (!ofs.is_open()) {
+        cout << "Can't open the file" << endl;
+        system("pause");
+    }
+
+    return ofs;
+}
+
 int main() {
-    openFile();
-    handleSymbolTableAndLocation();
+    openFileAndBuildStatementInfo();
+    buildSymbolTableAndLocation();
     showAndOutputResult_Pass1();
-    handleObjectCodes();
+    buildObjectCodes();
     showAndOutputResult_Pass2();
     return 0;
 }
 
-template<typename T>
-string int_to_hex(T v) {
-    stringstream stream;
-    stream << setfill('0') << setw(sizeof(T))
-           << uppercase
-           << hex << v;
-    return stream.str();
-}
-
-void handleSymbolTableAndLocation() {
+/**
+ * 構建 SymbolTable和Location
+ */
+void buildSymbolTableAndLocation() {
     int len = 0;
     int n = 0;
     int decLoc = 0;
@@ -177,7 +225,10 @@ void handleSymbolTableAndLocation() {
     }
 }
 
-void handleObjectCodes() {
+/**
+ * 構建 object code
+ */
+void buildObjectCodes() {
     for (int i = 0; i < statementInfos.size(); ++i) {
         stringstream ss;
         StatementInfo &si = statementInfos[i];
@@ -242,46 +293,11 @@ void handleObjectCodes() {
 
         objectCodes.push_back(ss.str());
     }
-//    for (const auto& o: objectCodes)
-//        cout << o << endl;
 }
 
 /**
- * 開Output檔並回傳 ofstream
- * @return
+ * 輸出Pass1檔案：symbolTable、location
  */
-ofstream openOutputStream(const string& f){
-    // 匯出檔案
-    ofstream ofs;
-    ofs.open(f);
-    if (!ofs.is_open()) {
-        cout << "Can't open the file" << endl;
-        system("pause");
-    }
-
-    return ofs;
-}
-
-string string_format(const string& fmt, ...) {
-    int size = ((int)fmt.size()) * 2 + 50;   // Use a rubric appropriate for your code
-    string str;
-    va_list ap;
-    while (true) {     // Maximum two passes on a POSIX system...
-        str.resize(size);
-        va_start(ap, fmt);
-        int n = vsnprintf((char *)str.data(), size, fmt.c_str(), ap);
-        va_end(ap);
-        if (n > -1 && n < size) {  // Everything worked
-            str.resize(n);
-            return str;
-        }
-        if (n > -1)  // Needed size returned
-            size = n + 1;   // For null char
-        else
-            size *= 2;      // Guess at a larger size (OS specific)
-    }
-}
-
 void showAndOutputResult_Pass1() {
 
     ofstream ofs1 = openOutputStream(OUTPUTPASS1_1NAME);
@@ -319,7 +335,9 @@ void showAndOutputResult_Pass1() {
     }
 }
 
-
+/**
+ * 輸出Pass2檔案：final sourceProgram、final objectProgram
+ */
 void showAndOutputResult_Pass2() {
     ofstream ofs = openOutputStream(OUTPUTPASS2_1NAME);
 
@@ -427,4 +445,33 @@ void showAndOutputResult_Pass2() {
 
     cout << ss.str();
     ofs2 << ss.str();
+}
+
+template<typename T>
+string int_to_hex(T v) {
+    stringstream stream;
+    stream << setfill('0') << setw(sizeof(T))
+           << uppercase
+           << hex << v;
+    return stream.str();
+}
+
+string string_format(const string& fmt, ...) {
+    int size = ((int)fmt.size()) * 2 + 50;   // Use a rubric appropriate for your code
+    string str;
+    va_list ap;
+    while (true) {     // Maximum two passes on a POSIX system...
+        str.resize(size);
+        va_start(ap, fmt);
+        int n = vsnprintf((char *)str.data(), size, fmt.c_str(), ap);
+        va_end(ap);
+        if (n > -1 && n < size) {  // Everything worked
+            str.resize(n);
+            return str;
+        }
+        if (n > -1)  // Needed size returned
+            size = n + 1;   // For null char
+        else
+            size *= 2;      // Guess at a larger size (OS specific)
+    }
 }
