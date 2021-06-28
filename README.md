@@ -107,19 +107,19 @@ vector<string> objectCodes;
 string lastAddress;
 
 int main() {
-	  //開檔並構建 StatementInfo
+    //開檔並構建 StatementInfo
     openFileAndBuildStatementInfo();
-  
-  	//構建 SymbolTable和Location
+    
+    //構建 SymbolTable和Location
     buildSymbolTableAndLocation();
-  
-  	//輸出 Pass1檔案：symbolTable、location
+    
+    //輸出 Pass1檔案：symbolTable、location
     showAndOutputResult_Pass1();
-
-	  //構建 object code
-  	buildObjectCodes();
-  	
-	  //輸出 Pass2檔案：final sourceProgram、final objectProgram
+    
+    //構建 object code
+    buildObjectCodes();
+    
+    //輸出 Pass2檔案：final sourceProgram、final objectProgram
     showAndOutputResult_Pass2();
     
     return 0;
